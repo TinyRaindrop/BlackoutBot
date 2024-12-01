@@ -1,19 +1,41 @@
 name: run blackout.py
 
 on:
-  schedule:
-    - cron: "*/15 7-23 * * *" # Every 15 min past hours 7-23
+  # schedule:
+  #   - cron: "*/15 7-23 * * *" # Every 15 min past hours 7-23
+  workflow_dispatch # manually
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: setup python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: "pip"
 
-      - run: pip install -r requirements.txt
+      - name: install python packages
+        run: pip install -r requirements.txt
 
-      - run: python blackout.py
+      - name: execute py script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python blackout.py
+
+      - name: commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action [bot]"
+          git add -A
+          git diff-index --quiet HEAD || (git commit -a -m "updated schedule.json" --allow-empty)
+
+      - name: push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main

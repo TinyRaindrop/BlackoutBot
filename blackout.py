@@ -11,6 +11,8 @@ import config
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+CHAT_ID = os.environ.get('CHAT_ID')
+
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 @bot.message_handler(commands=['start', 'hello'])
@@ -99,9 +101,12 @@ if __name__ == "__main__":
         print(json.dumps(data, ensure_ascii=False, indent=4))
 
         filtered_data = get_filtered_data(config.DATA_FILE)
+        filtered_data_string = json.dumps(filtered_data, ensure_ascii=False, indent=4)
 
         # Print the filtered data in JSON format
         print('\n === FILTERED DATA === \n')
-        print(json.dumps(filtered_data, ensure_ascii=False, indent=4))
+        print(filtered_data_string)
         
+        bot.send_message(CHAT_ID, filtered_data_string)
+
         

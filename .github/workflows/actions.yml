@@ -1,0 +1,19 @@
+name: run blackout.py
+
+on:
+  schedule:
+    - cron: "*/15 7-23 * * *" # Every 15 min past hours 7-23
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - run: python blackout.py

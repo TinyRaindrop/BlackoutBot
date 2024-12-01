@@ -2,7 +2,7 @@ name: run blackout.py
 
 on:
   schedule:
-    - cron: "*/20 7-23 * * *" # Every 20 min past hours 7-23
+    - cron: "*/20 5-22 * * *" # Every 20 min past hours 5-22 UTC
   # workflow_dispatch # manually
 
 jobs:

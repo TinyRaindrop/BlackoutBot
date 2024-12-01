@@ -70,43 +70,75 @@ def scrape_website(url):
     return table_data
 
 
-def get_filtered_data(file):
-    # Load JSON file
-    with open(file, 'r', encoding='utf-8') as json_file:
-        table_data = json.load(json_file)
-
+def get_filtered_data(data):
     today = datetime.now()
     current_date = today.strftime('%d.%m.%Y')
     tomorrow_date = (today + timedelta(days=1)).strftime('%d.%m.%Y')
 
     # Filter rows for current and tomorrow's dates
-    filtered_data = {
-        row_key: {k: v for k, v in row_data.items() if k in {"5", "6"}}
-        for row_key, row_data in table_data.items()
-        if row_key in {current_date, tomorrow_date}
-    }
+    try:
+        filtered_data = {
+            row_key: {k: v for k, v in row_data.items() if k in {"5", "6"}}
+            for row_key, row_data in data.items()
+            if row_key in {current_date, tomorrow_date}
+        }
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
     
     return filtered_data
+
+
+def read_file():
+    file = config.DATA_FILE
+    if not os.path.exists(file):
+        print ('config.DATA_FILE does not exist')
+        return False
+    with open(file, 'r', encoding='utf-8') as json_file: 
+        return json.load(json_file)
+
+
+def write_file(data):
+    data["timestamp"] = datetime.now().strftime('%d.%m.%Y %H:%M')
+    with open(config.DATA_FILE, 'w', encoding='utf-8') as json_file:
+        json.dump(data, json_file, ensure_ascii=False, indent=4)
+
+
+def publish(data):
+    data_json = json.dumps(data, ensure_ascii=False, indent=4)        
+            
+    print('\n === NEW MESSAGE === \n')
+    print(data_json)
+
+    bot.send_message(CHAT_ID, data_json)
 
 
 if __name__ == "__main__":
     data = scrape_website(config.URL)
 
     if data:
-        # Save to JSON file
-        with open(config.DATA_FILE, 'w', encoding='utf-8') as json_file:
-            json.dump(data, json_file, ensure_ascii=False, indent=4)
-
-        # Print data to console
         print(json.dumps(data, ensure_ascii=False, indent=4))
 
-        filtered_data = get_filtered_data(config.DATA_FILE)
-        filtered_data_string = json.dumps(filtered_data, ensure_ascii=False, indent=4)
-
-        # Print the filtered data in JSON format
-        print('\n === FILTERED DATA === \n')
-        print(filtered_data_string)
+        # Read from JSON file
+        old_data = read_file()
+        if not old_data: 
+            write_file(data)
+            print('No previous data was found.')
+            publish(data)
+            exit(1)
         
-        bot.send_message(CHAT_ID, filtered_data_string)
+        # Filter data
+        filtered_old_data = get_filtered_data(old_data)
+        filtered_data = get_filtered_data(data)
 
-        
+        if not filtered_data:
+            print('Failed to filter new data!')
+            exit(0)
+
+        # Checks passed, update with current timestamp
+        write_file(data)
+
+        # If data has changed
+        if filtered_data != filtered_old_data:
+            publish(filtered_data)
+                           

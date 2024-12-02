@@ -100,7 +100,7 @@ def read_file():
 
 
 def write_file(data):
-    data["timestamp"] = datetime.now().strftime('%d.%m.%Y %H:%M')
+    # data["timestamp"] = datetime.now().strftime('%d.%m.%Y %H:%M')
     with open(config.DATA_FILE, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
 
@@ -175,15 +175,16 @@ if __name__ == "__main__":
             exit(1)
         
         # Filter data
-        #filtered_old_data = get_filtered_data(old_data)
-        #filtered_data = get_filtered_data(data)
+        filtered_old_data = get_filtered_data(old_data)
+        filtered_data = get_filtered_data(data)
         
-        #if not filtered_data:
-        #    print('Failed to filter new data!')
-        #    exit(0)
+        if not filtered_data:
+            print('Failed to filter new data!')
+            exit(0)
 
         # If data has changed
-        if data != old_data:
+        # if data != old_data:
+        if filtered_data != filtered_old_data:            
             # Checks passed, save with current timestamp
             write_file(data)
             publish(data)

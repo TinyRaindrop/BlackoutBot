@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
-import telebot
+from telebot import TeleBot
+from telebot import formatting
 import os
 import json
 from datetime import datetime, timedelta
@@ -13,7 +14,7 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 
-bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+bot = TeleBot(TELEGRAM_BOT_TOKEN)
 
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
@@ -104,20 +105,66 @@ def write_file(data):
         json.dump(data, json_file, ensure_ascii=False, indent=4)
 
 
-def publish(data):
-    data_json = json.dumps(data, ensure_ascii=False, indent=4)        
-            
-    print('\n === NEW MESSAGE === \n')
-    print(data_json)
+def format_message(json_data):
+    message = ""
+    for date, shifts in json_data.items():
+        if not isinstance(shifts, dict):
+            continue
 
-    bot.send_message(CHAT_ID, data_json)
+        # Ensure all values in shifts are lists
+        print(shifts)
+        shifts = {k: v if isinstance(v, list) else [v] for k, v in shifts.items()}
+
+        # Check if all shifts are "expected"
+        all_expected = all(times == ["Очікується"] for times in shifts.values())
+
+        # Check if all shifts are empty
+        all_empty = all(
+            not times or (isinstance(times, list) and not any(times))
+            for times in shifts.values()
+            )
+        
+        message += f"⚡ {formatting.hbold(date)}"
+        if all_expected:
+            message += ": Очікується\n"
+        elif all_empty:
+            message += ": Немає відключень\n"
+        else:
+            message += "\n"
+            for shift, times in shifts.items():
+                shift_title = formatting.hitalic('Черга '  + shift + ':')
+                if times:
+                    if all(not t.strip() for t in times):  # lists with only empty strings
+                        times_str = " Немає відключень"
+                    else:
+                        times_str = "\n " + "\n".join(filter(None, times))
+                else:
+                    times_str = " Немає відключень"
+                message += f"{shift_title}{times_str}\n\n"
+
+    return message.strip()
+
+
+def publish(data):       
+    print('\n === NEW MESSAGE === \n')
+
+    message = format_message(data)
+    print(message)
+    bot.send_message(CHAT_ID, message, parse_mode='HTML')
+    
+    #data_json = json.dumps(data, ensure_ascii=False, indent=4)
+    #print(data_json)
+    #bot.send_message(CHAT_ID, data_json)
 
 
 if __name__ == "__main__":
     data = scrape_website(config.URL)
 
     if data:
-        print(json.dumps(data, ensure_ascii=False, indent=4))
+        print('=== DATA ===')
+        # print(json.dumps(data, ensure_ascii=False, indent=4))
+        print(data)
+        print(json.dumps(data, ensure_ascii=False))
 
         # Read from JSON file
         old_data = read_file()
@@ -128,17 +175,15 @@ if __name__ == "__main__":
             exit(1)
         
         # Filter data
-        filtered_old_data = get_filtered_data(old_data)
-        filtered_data = get_filtered_data(data)
-
-        if not filtered_data:
-            print('Failed to filter new data!')
-            exit(0)
-
-        # Checks passed, update with current timestamp
-        write_file(data)
+        #filtered_old_data = get_filtered_data(old_data)
+        #filtered_data = get_filtered_data(data)
+        
+        #if not filtered_data:
+        #    print('Failed to filter new data!')
+        #    exit(0)
 
         # If data has changed
-        if filtered_data != filtered_old_data:
-            publish(filtered_data)
-                           
+        if data != old_data:
+            # Checks passed, save with current timestamp
+            write_file(data)
+            publish(data)

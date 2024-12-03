@@ -187,4 +187,4 @@ if __name__ == "__main__":
         if filtered_data != filtered_old_data:            
             # Checks passed, save with current timestamp
             write_file(data)
-            publish(data)
+            publish(filtered_data)

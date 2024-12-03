@@ -1,12 +1,12 @@
 name: run blackout.py
 
 on:
-  #schedule:
-  #  - cron: "5,35 5-22 * * *" # Every X min past hours 5-22 UTC
-  workflow_dispatch # manually
+  schedule:
+    - cron: "*/20 5-22 * * *" # Every 20 min past hours 5-22 UTC
+  # workflow_dispatch # manually
 
 jobs:
-  run-script:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo
@@ -27,32 +27,15 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python blackout.py
 
-      - name: Checkout or Create Bot-Updates Branch
-        run: |
-          git fetch origin
-          if git show-ref --quiet refs/heads/bot-updates; then
-            git checkout bot-updates
-          else
-            git checkout -b bot-updates
-          fi
-
-      - name: Merge Main into Bot-Updates
-        run: |
-          git merge origin/main --no-edit || exit 1
-
-      - name: Commit Changes to Bot-Updates
+      - name: commit files
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action [bot]"
           git add -A
-          git diff-index --quiet HEAD || git commit -m "Updated schedule.json" --allow-empty
+          git diff-index --quiet HEAD || (git commit -a -m "updated schedule.json" --allow-empty)
 
-      - name: Pull Latest Changes for Bot-Updates
-        run: |
-          git pull origin bot-updates --rebase
-
-      - name: Push Changes to Bot-Updates
+      - name: push changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: bot-updates
+          branch: main
